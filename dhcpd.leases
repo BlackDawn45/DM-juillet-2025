@@ -1,0 +1,44 @@
+# The format of this file is documented in the dhcpd.leases(5) manual page.
+# This lease file was written by isc-dhcp-4.4.3-P1
+
+# authoring-byte-order entry is generated, DO NOT DELETE
+authoring-byte-order little-endian;
+
+lease 192.168.50.100 {
+  starts 4 2025/07/03 13:11:22;
+  ends 4 2025/07/03 13:16:04;
+  tstp 4 2025/07/03 13:16:04;
+  cltt 4 2025/07/03 13:11:22;
+  binding state free;
+  hardware ethernet 00:0c:29:84:ae:f4;
+  uid "\377\237n\205$\000\002\000\000\253\021\255T\277\030\312\301\010\032";
+}
+lease 192.168.50.102 {
+  starts 4 2025/07/03 15:14:00;
+  ends 4 2025/07/03 15:24:00;
+  tstp 4 2025/07/03 15:24:00;
+  cltt 4 2025/07/03 15:14:00;
+  binding state free;
+  hardware ethernet 00:0c:29:a1:f1:56;
+  uid "\001\000\014)\241\361V";
+  set vendor-class-identifier = "MSFT 5.0";
+}
+lease 192.168.50.103 {
+  starts 4 2025/07/03 15:21:44;
+  ends 4 2025/07/03 15:31:44;
+  tstp 4 2025/07/03 15:31:44;
+  cltt 4 2025/07/03 15:21:44;
+  binding state free;
+  hardware ethernet 00:0c:29:a1:7f:e5;
+  uid "\001\000\014)\241\177\345";
+  set vendor-class-identifier = "MSFT 5.0";
+}
+lease 192.168.50.101 {
+  starts 5 2025/07/04 10:39:58;
+  ends 5 2025/07/04 10:49:58;
+  tstp 5 2025/07/04 10:49:58;
+  cltt 5 2025/07/04 10:39:58;
+  binding state free;
+  hardware ethernet 00:0c:29:1d:bc:ff;
+  uid "\001\000\014)\035\274\377";
+}
