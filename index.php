@@ -1,17 +1,13 @@
 <?php
-// On inclut le fichier qui permet la connexion à la base de données
 require_once 'db.php';
-
-// On règle le fuseau horaire pour afficher des dates correctes
+session_start();
+if (!isset($_SESSION['user'])) {
+    header('Location: login.php');
+    exit;
+}
 date_default_timezone_set('Europe/Paris');
 
-// On prépare la requête SQL pour récupérer toutes les lignes de la table
-$sql = "SELECT * FROM adresses_logiques";
-
-// On exécute la requête
-$stmt = $pdo->query($sql);
-
-// On récupère toutes les adresses sous forme de tableau PHP
+$stmt = $pdo->query("SELECT * FROM adresses_logiques ORDER BY date_attribution DESC");
 $adresses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -21,75 +17,76 @@ $adresses = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <title>Gestion des adresses DHCP</title>
     <style>
-        /* On crée un design simple pour la page */
-        body { font-family: Arial; padding: 2em; background: #f9f9f9; }
-        table { border-collapse: collapse; width: 100%; background: white; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-        th { background: #eee; }
-        .attribuee { color: green; font-weight: bold; }
-        .disponible { color: orange; font-weight: bold; }
-        button { padding: 10px 20px; margin-bottom: 15px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; background: #f7f7f7; }
+        h2 { text-align: center; color: #333; }
+        table { border-collapse: collapse; width: 80%; margin: 20px auto; background: white; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th { background-color: #eee; }
+        .button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            background-color: #cfe3f5;
+            border: 1px solid #666;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #bcd7ec;
+        }
+        .center {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <h1>Adresses DHCP détectées</h1>
 
-    <!-- Formulaire avec bouton pour lancer la mise à jour -->
-    <form method="post">
-        <button type="submit" name="update">🔄 Mettre à jour depuis DHCP</button>
+<h2>Adresses DHCP détectées</h2>
+<p class="center">👤 Connecté en tant que <?= htmlspecialchars($_SESSION['user']) ?> | <a href="logout.php">Déconnexion</a></p>
+
+<div class="center">
+    <!-- Bouton mettre à jour -->
+    <form action="scanner.php" method="post" style="display:inline;">
+        <button class="button" type="submit">🔄 Mettre à jour depuis DHCP</button>
     </form>
 
-    <!-- Formulaire pour exporter -->
-    <form method="get" action="export_yaml.php">
-    <button type="submit">📤 Exporter en YAML</button>
+    <!-- Bouton export YAML -->
+    <form action="export_yaml.php" method="post" style="display:inline;">
+        <button class="button" type="submit">📄 Exporter en YAML</button>
     </form>
+</div>
 
-<?php
-// Si on a cliqué sur le bouton "update"
-if (isset($_POST['update'])) {
-    // On lance le script scanner.php en l'incluant dans la même page
-    include 'scanner.php';
-    // On recharge la liste mise à jour
-    $stmt = $pdo->query($sql);
-    $adresses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo "<p><strong>Mise à jour effectuée !</strong></p>";
-}
-?>
+<?php if (isset($_GET['updated'])): ?>
+    <p class="center" style="color: green;">✅ Mise à jour effectuée avec succès</p>
+<?php endif; ?>
 
-    <!-- On commence le tableau -->
-    <table>
-        <tr>
-            <th>IP</th>
-            <th>MAC</th>
-            <th>Attribuée ?</th>
-            <th>Date d’attribution</th>
-            <th>Durée (minutes)</th>
-        </tr>
+<table>
+    <tr>
+        <th>IP</th>
+        <th>MAC</th>
+        <th>Date d’attribution</th>
+        <th>Durée (minutes)</th>
+    </tr>
 
-        <!-- On affiche chaque adresse dans le tableau -->
-        <?php foreach ($adresses as $a): ?>
+    <?php foreach ($adresses as $a): ?>
         <tr>
             <td><?= htmlspecialchars($a['adresse_logique']) ?></td>
             <td><?= htmlspecialchars($a['adresse_physique']) ?></td>
-            <td class="<?= $a['attribuee'] ? 'attribuee' : 'disponible' ?>">
-                <?= $a['attribuee'] ? 'Oui' : 'Non' ?>
-            </td>
-            <td><?= $a['date_attribution'] ?></td>
+            <td><?= htmlspecialchars($a['date_attribution']) ?></td>
             <td>
                 <?php
-                if ($a['date_attribution']) {
-                    // On calcule la durée depuis l’attribution
+                if (!empty($a['date_attribution'])) {
                     $start = new DateTime($a['date_attribution']);
                     $now = new DateTime();
-                    $diff = $now->getTimestamp() - $start->getTimestamp();
-                    echo floor($diff / 60); // On affiche la durée en minutes
+                    $interval = $now->diff($start);
+                    echo ($interval->days * 24 * 60) + ($interval->h * 60) + $interval->i;
                 } else {
-                    echo '-';
+                    echo "-";
                 }
                 ?>
             </td>
         </tr>
-        <?php endforeach; ?>
-    </table>
+    <?php endforeach; ?>
+</table>
+
 </body>
 </html>
