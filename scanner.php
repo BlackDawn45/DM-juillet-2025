@@ -1,73 +1,70 @@
 <?php
-// On inclut la connexion à la base de données
-require_once 'db.php';
-
-// On règle le fuseau horaire
+require_once 'db.php'; // Connexion à la base de données
 date_default_timezone_set('Europe/Paris');
 
-// On lit tout le fichier dhcpd.leases et on met chaque ligne dans un tableau
-$lines = file('dhcpd.leases');
+// On réinitialise la base : suppression de toutes les entrées
+$pdo->exec("TRUNCATE TABLE adresses_logiques");
 
-// On initialise les variables
-$ip = $mac = $start = null;
-$inserted = 0; // Compteur d’IP ajoutées
-$updated = 0;  // Compteur d’IP mises à jour
+// On lit le fichier des baux DHCP
+$leasesFile = '/var/lib/dhcp/dhcpd.leases';
+$lines = file($leasesFile);
+$leases = [];
+$currentIP = '';
+$mac = '';
+$start = '';
+$binding = '';
 
-// On parcourt chaque ligne du fichier
+// On parcourt le fichier pour trouver les baux actifs
 foreach ($lines as $line) {
-    $line = trim($line); // On enlève les espaces
+    $line = trim($line);
 
-    // Si la ligne commence par "lease", c’est une nouvelle adresse IP
-    if (str_starts_with($line, "lease ")) {
-        $ip = explode(" ", $line)[1]; // On récupère l’IP
+    if (preg_match('/^lease (.+) {$/', $line, $matches)) {
+        $currentIP = $matches[1];
+        $mac = '';
+        $start = '';
+        $binding = '';
     }
 
-    // Si la ligne commence par "starts", c’est la date d’attribution
-    if (str_starts_with($line, "starts ")) {
-        preg_match('/starts \d (\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2});/', $line, $matches);
-        $start = $matches[1] ?? null; // On récupère la date
+    if (strpos($line, 'starts') === 0) {
+        $parts = preg_split('/\s+/', $line);
+        $start = $parts[2] . ' ' . rtrim($parts[3], ';');
     }
 
-    // Si la ligne contient l’adresse MAC
-    if (str_starts_with($line, "hardware ethernet")) {
-        $mac = explode(" ", $line)[2]; // On récupère la MAC
+    if (strpos($line, 'binding state') === 0) {
+        $binding = trim(explode(' ', $line)[2], ';');
     }
 
-    // Quand on arrive à la fin d’un bloc DHCP
-    if ($line === "}") {
-        if ($ip && $mac && $start) {
-            // On convertit la date au format MySQL
-            $start_dt = DateTime::createFromFormat('Y/m/d H:i:s', $start);
-            $start_mysql = $start_dt ? $start_dt->format('Y-m-d H:i:s') : null;
+    if (strpos($line, 'hardware ethernet') === 0) {
+        $mac = trim(explode(' ', $line)[2], ';');
+    }
 
-            // Requête : insérer ou mettre à jour la ligne
-            $sql = "INSERT INTO adresses_logiques (adresse_logique, adresse_physique, attribuee, date_attribution)
-                    VALUES (:ip, :mac, true, :date)
-                    ON DUPLICATE KEY UPDATE
-                    adresse_physique = VALUES(adresse_physique),
-                    date_attribution = VALUES(date_attribution),
-                    attribuee = true";
-
-            // On prépare et on exécute la requête
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':ip' => $ip,
-                ':mac' => $mac,
-                ':date' => $start_mysql
-            ]);
-
-            // On compte les ajouts et les mises à jour
-            if ($stmt->rowCount() === 1) {
-                $inserted++;
-            } else {
-                $updated++;
-            }
+    if ($line === '}') {
+        if ($binding === 'active') {
+            // On écrase l'ancienne entrée si on trouve une plus récente
+            $leases[$currentIP] = [
+                'mac' => $mac,
+                'start' => $start
+            ];
         }
-
-        // On vide les variables pour la prochaine adresse
-        $ip = $mac = $start = null;
+        $currentIP = '';
     }
 }
 
-// On peut afficher ces messages dans index.php si besoin
+// On teste si les IP sont en ligne avec un ping
+foreach ($leases as $ip => $data) {
+    $pingResult = exec("ping -c 1 -W 1 $ip", $output, $status);
+    if ($status === 0) { // 0 = la machine a répondu
+        // On insère dans la base uniquement les IP en ligne
+        $stmt = $pdo->prepare("INSERT INTO adresses_logiques (adresse_logique, adresse_physique, date_attribution) VALUES (:ip, :mac, :date)");
+        $stmt->execute([
+            'ip' => $ip,
+            'mac' => $data['mac'],
+            'date' => $data['start']
+        ]);
+    }
+}
+
+// On retourne sur l'IHM
+header('Location: index.php?updated=1');
+exit;
 ?>
