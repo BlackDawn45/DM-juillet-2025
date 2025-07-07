@@ -22,7 +22,7 @@ La durée de détention de l’adresse IP (temps écoulé depuis l’attribution
 
 Possibilité d’exporter la liste des IP libres et/ou attribuées au format YAML.
 
-Les exports doivent inclure : adresse IP, adresse MAC, statut (occupée/libre), durée.
+Les exports doivent inclure : adresse IP, adresse MAC, durée.
 
 🧱 Champs du Projet
 Le projet couvre plusieurs domaines de compétences :
@@ -34,7 +34,7 @@ Domaine	Éléments abordés
 🔐 Sécurité	Sécurisation de l’accès et des données de l’IHM
 
 🛠️ Environnement Technique
-Tu es libre de choisir les outils précis, mais l’IHM Web doit être développée en PHP/HTML.
+l’IHM Web est développée en PHP/HTML.
 
 🧰 Éléments à mettre en place :
 🔧 Serveur DHCP
@@ -52,8 +52,6 @@ MariaDB comme SGBD
 Outils d’administration possibles :
 
 phpMyAdmin
-
-ou MySQL Workbench
 
 🕵️‍♂️ Scanner réseau
 
